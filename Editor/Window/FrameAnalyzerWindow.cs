@@ -20,7 +20,8 @@ namespace FrameAnalyzer.Editor.Window
         public static void ShowWindow()
         {
             var window = GetWindow<FrameAnalyzerWindow>();
-            window.titleContent = new GUIContent("AI Perf Analysis");
+            var icon = EditorGUIUtility.IconContent("d_Profiler.CPU").image;
+            window.titleContent = new GUIContent("AI Perf Analysis", icon);
             window.minSize = new Vector2(400, 300);
         }
 
@@ -68,8 +69,9 @@ namespace FrameAnalyzer.Editor.Window
             _root = rootVisualElement;
             _root.AddToClassList("root");
 
+            var packagePath = ResolvePackagePath();
             var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
-                "Packages/com.tonythedev.frame-analyzer/Editor/UI/FrameAnalyzerStyles.uss");
+                $"{packagePath}/Editor/UI/FrameAnalyzerStyles.uss");
             if (styleSheet != null)
                 _root.styleSheets.Add(styleSheet);
 
@@ -723,6 +725,15 @@ namespace FrameAnalyzer.Editor.Window
         }
 
         // ── Helpers ──
+
+        private static string ResolvePackagePath()
+        {
+            var info = UnityEditor.PackageManager.PackageInfo
+                .FindForAssembly(typeof(FrameAnalyzerWindow).Assembly);
+            return info != null
+                ? $"Packages/{info.name}"
+                : "Packages/com.tonythedev.unity-ai-performance-analysis";
+        }
 
         private bool EnsureClaude()
         {
