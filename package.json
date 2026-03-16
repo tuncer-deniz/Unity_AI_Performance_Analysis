@@ -1,7 +1,7 @@
 {
-  "name": "com.tonythedev.frame-analyzer",
+  "name": "com.tonythedev.unity-ai-performance-analysis",
   "version": "0.1.0",
-  "displayName": "Frame Analyzer",
+  "displayName": "AI Performance Analysis",
   "description": "One-click Play Mode performance analysis with AI-powered insights via Claude Code CLI.",
   "unity": "6000.0",
   "author": {
