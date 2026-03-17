@@ -98,6 +98,14 @@ namespace FrameAnalyzer.Editor.Window
 
             toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
 
+            if (ClaudeCodeBridge.IsAvailable)
+            {
+                var sendToCliBtn = new Button(SendToClaudeCodeCli) { text = "\u2192 Claude Code" };
+                sendToCliBtn.AddToClassList("toolbar-btn");
+                sendToCliBtn.tooltip = "Attach captured data to the Claude Code CLI window";
+                toolbar.Add(sendToCliBtn);
+            }
+
             _exportReportBtn = new Button(ExportReport) { text = "Export Report" };
             _exportReportBtn.AddToClassList("toolbar-btn");
             _exportReportBtn.SetEnabled(!string.IsNullOrEmpty(_lastReportMarkdown));
@@ -692,6 +700,41 @@ namespace FrameAnalyzer.Editor.Window
         }
 
         // ── Export ──
+
+        private void SendToClaudeCodeCli()
+        {
+            string content = null;
+            string label = null;
+
+            if (_orchestrator?.Session != null)
+            {
+                // Send raw captured data — most useful for interactive analysis
+                content = SessionSerializer.ToAnalysisPrompt(_orchestrator.Session, _sceneSnapshot);
+                label = "Frame Analysis Data";
+            }
+            else if (!string.IsNullOrEmpty(_lastReportMarkdown))
+            {
+                // Fallback: send the last report
+                content = _lastReportMarkdown;
+                label = "Frame Analysis Report";
+            }
+
+            if (string.IsNullOrEmpty(content))
+            {
+                SetStatus("No data to send. Run an analysis first.", true);
+                return;
+            }
+
+            var tempDir = System.IO.Path.Combine(Application.dataPath, "..", "Temp");
+            if (!System.IO.Directory.Exists(tempDir))
+                System.IO.Directory.CreateDirectory(tempDir);
+
+            var tempPath = System.IO.Path.Combine(tempDir, "FrameAnalysis_Data.md");
+            System.IO.File.WriteAllText(tempPath, content);
+
+            ClaudeCodeBridge.SendFile(tempPath, label, "Report");
+            SetStatus("Sent to Claude Code CLI.", false);
+        }
 
         private void ExportReport()
         {
