@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using FrameAnalyzer.Runtime.Data;
 using FrameAnalyzer.Runtime.Serialization;
+using FrameAnalyzer.Runtime.Utils;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -76,7 +77,7 @@ namespace FrameAnalyzer.Editor.Claude
 
         static string LoadAgentPrompt()
         {
-            bool isHdrp = IsHdrpActive();
+            bool isHdrp = PipelineDetector.IsHdrpActive();
             string promptFileName = isHdrp ? "FrameAnalysis_HDRP.md" : "FrameAnalysis.md";
 
             // Look for the agent markdown file relative to this script
@@ -109,15 +110,6 @@ namespace FrameAnalyzer.Editor.Claude
             }
 
             return GetFallbackAgentPrompt(isHdrp);
-        }
-
-        static bool IsHdrpActive()
-        {
-            var pipeline = GraphicsSettings.currentRenderPipeline;
-            if (pipeline == null) return false;
-
-            string pipelineType = pipeline.GetType().Name;
-            return pipelineType.Contains("HDRenderPipeline") || pipelineType.Contains("HDRP");
         }
 
         static string GetFallbackAgentPrompt(bool isHdrp)

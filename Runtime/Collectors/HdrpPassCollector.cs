@@ -108,6 +108,10 @@ namespace FrameAnalyzer.Runtime.Collectors
                 else
                     rec.Dispose();
             }
+
+            if (_activeRecorders.Count == 0)
+                UnityEngine.Debug.LogWarning("[FrameAnalyzer] HdrpPassCollector: No HDRP profiler markers found. " +
+                    "Marker names may not match this HDRP version. Run the Unity Profiler manually to verify marker names.");
         }
 
         public void Collect(FrameSnapshot snapshot)
@@ -126,6 +130,12 @@ namespace FrameAnalyzer.Runtime.Collectors
                     CpuMs = ns / 1_000_000.0,
                     GpuMs = 0 // GPU per-pass timing not available via ProfilerRecorder
                 });
+            }
+
+            if (_activeRecorders.Count == 0)
+            {
+                hdrp.WasCollected = false;
+                hdrp.CollectionNote = "No HDRP profiler markers matched. Verify marker names against your HDRP version.";
             }
 
             snapshot.HdrpPasses = hdrp;

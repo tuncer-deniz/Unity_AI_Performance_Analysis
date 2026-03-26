@@ -16,13 +16,15 @@ namespace FrameAnalyzer.Runtime.Data
     {
         public bool WasCollected;
         public List<HdrpPassEntry> Passes;
+        public string CollectionNote;
 
         public static HdrpPassTimingData Create()
         {
             return new HdrpPassTimingData
             {
                 WasCollected = false,
-                Passes = new List<HdrpPassEntry>()
+                Passes = new List<HdrpPassEntry>(),
+                CollectionNote = null
             };
         }
     }

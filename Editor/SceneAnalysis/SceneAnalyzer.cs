@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using FrameAnalyzer.Runtime.Utils;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -133,7 +134,7 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
                         snap.RaycastTargetCount++;
 
                     // HDRP-specific components
-                    if (IsHdrpActive())
+                    if (PipelineDetector.IsHdrpActive())
                     {
                         // DecalProjector (HDRP)
                         if (comp.GetType().Name == "DecalProjector")
@@ -172,7 +173,7 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
             snap.EstimatedTextureMB = EstimateTextureMemory();
 
             // Check for volumetric fog/clouds in HDRP
-            if (IsHdrpActive())
+            if (PipelineDetector.IsHdrpActive())
             {
                 snap.HasVolumetricFog = CheckForVolumetricFog();
             }
@@ -370,45 +371,49 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
         }
 
         /// <summary>
-        /// Detects if HDRP is the active render pipeline.
-        /// </summary>
-        static bool IsHdrpActive()
-        {
-            var pipeline = GraphicsSettings.currentRenderPipeline;
-            if (pipeline == null) return false;
-
-            string pipelineType = pipeline.GetType().Name;
-            return pipelineType.Contains("HDRenderPipeline") || pipelineType.Contains("HDRP");
-        }
-
-        /// <summary>
         /// Checks if volumetric fog or clouds are enabled in any HDRP volume in the scene.
-        /// This is a best-effort check; exact detection requires HDRP runtime API access.
+        /// Uses reflection to inspect Volume profiles for actual Fog or VolumetricClouds components.
         /// </summary>
         static bool CheckForVolumetricFog()
         {
             try
             {
-                // Look for Volume components with profiles that might have volumetric settings
-                var volumes = Object.FindObjectsByType<MonoBehaviour>(UnityEngine.FindObjectsInactive.Include, UnityEngine.FindObjectsSortMode.None);
+                var volumes = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 foreach (var vol in volumes)
                 {
-                    if (vol == null) continue;
-                    string typeName = vol.GetType().Name;
-                    if (typeName == "Volume")
+                    if (vol == null || vol.GetType().Name != "Volume") continue;
+
+                    // Get the Volume.profile or Volume.sharedProfile via reflection
+                    var profileProp = vol.GetType().GetProperty("profile") ?? vol.GetType().GetProperty("sharedProfile");
+                    if (profileProp == null) continue;
+                    var profile = profileProp.GetValue(vol);
+                    if (profile == null) continue;
+
+                    // Get VolumeProfile.components list
+                    var componentsProp = profile.GetType().GetProperty("components");
+                    if (componentsProp == null) continue;
+                    var components = componentsProp.GetValue(profile) as System.Collections.IList;
+                    if (components == null) continue;
+
+                    foreach (var comp in components)
                     {
-                        // A volume exists. In HDRP, volumetric fog/clouds would be configured in the volume profile.
-                        // Without access to HDRP internals, we assume any Volume might have volumetric settings.
-                        // This is conservative but safe.
-                        return true;
+                        if (comp == null) continue;
+                        string typeName = comp.GetType().Name;
+                        // Check for actual volumetric fog/cloud components
+                        if (typeName == "Fog" || typeName == "VolumetricClouds")
+                        {
+                            // Check if the component is active
+                            var activeProp = comp.GetType().GetProperty("active");
+                            if (activeProp != null && (bool)activeProp.GetValue(comp))
+                                return true;
+                        }
                     }
                 }
             }
             catch
             {
-                // Ignore exceptions; this is a best-effort check
+                // Ignore; best-effort
             }
-
             return false;
         }
     }

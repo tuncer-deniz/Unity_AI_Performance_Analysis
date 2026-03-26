@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FrameAnalyzer.Runtime.Collectors;
 using FrameAnalyzer.Runtime.Data;
+using FrameAnalyzer.Runtime.Utils;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -30,7 +31,7 @@ namespace FrameAnalyzer.Editor.Capture
                 collectors = new List<IFrameDataCollector>();
                 AddDefaultCollectors(collectors);
             }
-            _collectors = collectors ?? throw new ArgumentNullException(nameof(collectors));
+            _collectors = collectors;
         }
 
         /// <summary>
@@ -46,7 +47,7 @@ namespace FrameAnalyzer.Editor.Capture
             collectors.Add(new BottleneckCollector());
 
             // Add pipeline-specific collector
-            if (IsHdrpActive())
+            if (PipelineDetector.IsHdrpActive())
             {
                 collectors.Add(new HdrpPassCollector());
             }
@@ -55,19 +56,6 @@ namespace FrameAnalyzer.Editor.Capture
                 // Default to URP or generic render pass collector
                 collectors.Add(new UrpPassCollector());
             }
-        }
-
-        /// <summary>
-        /// Detects if HDRP is the active render pipeline.
-        /// Returns true if HDRP is active, false if URP or other.
-        /// </summary>
-        private static bool IsHdrpActive()
-        {
-            var pipeline = GraphicsSettings.currentRenderPipeline;
-            if (pipeline == null) return false;
-
-            string pipelineType = pipeline.GetType().Name;
-            return pipelineType.Contains("HDRenderPipeline") || pipelineType.Contains("HDRP");
         }
 
         public void StartCapture(int frameCount)
