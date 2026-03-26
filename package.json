@@ -1,8 +1,8 @@
 {
   "name": "com.tonythedev.unity-ai-performance-analysis",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "AI Performance Analysis",
-  "description": "One-click Play Mode performance analysis with AI-powered insights via Claude Code CLI.",
+  "description": "One-click Play Mode performance analysis with AI-powered insights via Claude Code CLI. Supports both URP and HDRP pipelines.",
   "unity": "6000.0",
   "author": {
     "name": "TonyTheDev",
@@ -11,6 +11,7 @@
   "license": "BUSL-1.1",
   "dependencies": {
     "com.unity.render-pipelines.universal": "17.0.0",
+    "com.unity.render-pipelines.high-definition": "17.0.0",
     "com.unity.render-pipelines.core": "17.0.0",
     "com.unity.memoryprofiler": "1.1.0",
     "com.unity.performance.profile-analyzer": "1.2.2"
@@ -20,6 +21,7 @@
     "profiler",
     "analysis",
     "URP",
+    "HDRP",
     "AI"
   ],
   "type": "tool"

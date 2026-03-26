@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FrameAnalyzer.Runtime.Collectors;
 using FrameAnalyzer.Runtime.Data;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace FrameAnalyzer.Editor.Capture
 {
@@ -18,9 +19,55 @@ namespace FrameAnalyzer.Editor.Capture
 
         private readonly List<IFrameDataCollector> _collectors;
 
-        public CaptureOrchestrator(List<IFrameDataCollector> collectors)
+        /// <summary>
+        /// Creates a CaptureOrchestrator, auto-detecting the active render pipeline.
+        /// If collectors list is null, it creates default collectors based on the pipeline.
+        /// </summary>
+        public CaptureOrchestrator(List<IFrameDataCollector> collectors = null)
         {
+            if (collectors == null)
+            {
+                collectors = new List<IFrameDataCollector>();
+                AddDefaultCollectors(collectors);
+            }
             _collectors = collectors ?? throw new ArgumentNullException(nameof(collectors));
+        }
+
+        /// <summary>
+        /// Adds default collectors based on the current render pipeline (URP vs HDRP).
+        /// </summary>
+        private static void AddDefaultCollectors(List<IFrameDataCollector> collectors)
+        {
+            // Add common collectors
+            collectors.Add(new CpuTimingCollector());
+            collectors.Add(new MemoryCollector());
+            collectors.Add(new RenderingStatsCollector());
+            collectors.Add(new GpuTimingCollector());
+            collectors.Add(new BottleneckCollector());
+
+            // Add pipeline-specific collector
+            if (IsHdrpActive())
+            {
+                collectors.Add(new HdrpPassCollector());
+            }
+            else
+            {
+                // Default to URP or generic render pass collector
+                collectors.Add(new UrpPassCollector());
+            }
+        }
+
+        /// <summary>
+        /// Detects if HDRP is the active render pipeline.
+        /// Returns true if HDRP is active, false if URP or other.
+        /// </summary>
+        private static bool IsHdrpActive()
+        {
+            var pipeline = GraphicsSettings.currentRenderPipeline;
+            if (pipeline == null) return false;
+
+            string pipelineType = pipeline.GetType().Name;
+            return pipelineType.Contains("HDRenderPipeline") || pipelineType.Contains("HDRP");
         }
 
         public void StartCapture(int frameCount)
