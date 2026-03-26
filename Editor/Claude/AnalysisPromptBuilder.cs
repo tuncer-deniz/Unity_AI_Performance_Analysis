@@ -2,7 +2,9 @@ using System.IO;
 using System.Text;
 using FrameAnalyzer.Runtime.Data;
 using FrameAnalyzer.Runtime.Serialization;
+using FrameAnalyzer.Runtime.Utils;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace FrameAnalyzer.Editor.Claude
 {
@@ -10,12 +12,13 @@ namespace FrameAnalyzer.Editor.Claude
     {
         /// <summary>
         /// Builds the full prompt for Claude: agent instructions + frame data + scene data.
+        /// Automatically selects URP or HDRP-specific agent prompt based on detected pipeline.
         /// </summary>
         public static string Build(CaptureSession session, string sceneSnapshot = null, bool mcpAvailable = false, string userNotes = null)
         {
             var sb = new StringBuilder();
 
-            // Agent prompt (performance analysis expertise)
+            // Agent prompt (performance analysis expertise) - pipeline-specific
             string agentContent = LoadAgentPrompt();
             if (!string.IsNullOrEmpty(agentContent))
             {
@@ -74,14 +77,17 @@ namespace FrameAnalyzer.Editor.Claude
 
         static string LoadAgentPrompt()
         {
+            bool isHdrp = PipelineDetector.IsHdrpActive();
+            string promptFileName = isHdrp ? "FrameAnalysis_HDRP.md" : "FrameAnalysis.md";
+
             // Look for the agent markdown file relative to this script
-            var guids = UnityEditor.AssetDatabase.FindAssets("FrameAnalysis t:TextAsset",
+            var guids = UnityEditor.AssetDatabase.FindAssets($"{Path.GetFileNameWithoutExtension(promptFileName)} t:TextAsset",
                 new[] { "Packages/com.tonythedev.frame-analyzer/Editor/Agents/Definitions" });
 
             foreach (var guid in guids)
             {
                 var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                if (path.EndsWith("FrameAnalysis.md"))
+                if (path.EndsWith(promptFileName))
                 {
                     var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(path);
                     if (asset != null) return asset.text;
@@ -90,15 +96,35 @@ namespace FrameAnalyzer.Editor.Claude
 
             // Fallback: try direct file read
             var directPath = Path.Combine(Application.dataPath,
-                "../Packages/com.tonythedev.frame-analyzer/Editor/Agents/Definitions/FrameAnalysis.md");
+                $"../Packages/com.tonythedev.frame-analyzer/Editor/Agents/Definitions/{promptFileName}");
             if (File.Exists(directPath))
                 return File.ReadAllText(directPath);
 
-            return GetFallbackAgentPrompt();
+            // If HDRP file not found, try URP as fallback
+            if (isHdrp)
+            {
+                directPath = Path.Combine(Application.dataPath,
+                    "../Packages/com.tonythedev.frame-analyzer/Editor/Agents/Definitions/FrameAnalysis.md");
+                if (File.Exists(directPath))
+                    return File.ReadAllText(directPath);
+            }
+
+            return GetFallbackAgentPrompt(isHdrp);
         }
 
-        static string GetFallbackAgentPrompt()
+        static string GetFallbackAgentPrompt(bool isHdrp)
         {
+            if (isHdrp)
+            {
+                return @"You are a Unity performance analysis expert specializing in HDRP (High Definition Render Pipeline).
+You analyze profiler data, rendering statistics, GPU/CPU timing, memory patterns, and scene structure to identify
+performance bottlenecks and provide actionable optimization recommendations.
+
+Your expertise includes: Deferred vs forward rendering, ray tracing optimization, volumetric lighting,
+GPU/CPU bottleneck identification, GC allocation reduction, HDRP render pass optimization, LOD configuration,
+physics optimization, custom pass volumes, material complexity (Lit vs StackLit), and shader performance.";
+            }
+
             return @"You are a Unity performance analysis expert specializing in URP (Universal Render Pipeline).
 You analyze profiler data, rendering statistics, memory patterns, and scene structure to identify
 performance bottlenecks and provide actionable optimization recommendations.

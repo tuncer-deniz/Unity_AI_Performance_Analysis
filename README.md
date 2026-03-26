@@ -1,13 +1,15 @@
 # Unity AI Performance Analysis
 
-**1-Click Play Mode profiler for Unity 6 + URP.**
+**1-Click Play Mode profiler for Unity 6 — supports both URP and HDRP.**
 
-Captures CPU, GPU, memory, per-URP-pass timing, and scene structure, then streams an AI-powered performance report via Claude. Includes per-method hotspot detection, loaded asset memory breakdown, session history, and side-by-side comparison. All displayed in a formatted editor window and exportable as a Markdown file.
+Captures CPU, GPU, memory, per-render-pass timing, and scene structure, then streams an AI-powered performance report via Claude. Auto-detects your render pipeline and adjusts data collection and AI analysis accordingly. Includes per-method hotspot detection, loaded asset memory breakdown, session history, and side-by-side comparison. All displayed in a formatted editor window and exportable as a Markdown file.
 
 ## Features
 
 - **Per-frame profiler capture**: CPU timing, GPU timing, memory, rendering stats, GC allocations
 - **URP render pass breakdown**: Per-pass CPU timing for DrawOpaqueObjects, Bloom, Shadows, SSAO, etc.
+- **HDRP render pass breakdown**: Per-pass CPU timing for GBuffer, Deferred Lighting, Volumetric Fog, SSR, ray tracing, and more
+- **Automatic pipeline detection**: Detects URP or HDRP at capture time — no manual configuration
 - **Bottleneck classification**: Automatic CPU/GPU/PresentLimited/Balanced detection per frame
 - **Memory breakdown**: Loaded asset memory analysis by type (textures, meshes, audio, etc.)
 - **Per-method hotspot detection**: Identify the most expensive methods in your frame
@@ -22,7 +24,7 @@ Captures CPU, GPU, memory, per-URP-pass timing, and scene structure, then stream
 ## Requirements
 
 - Unity 6 (6000.0+)
-- Universal Render Pipeline (URP)
+- Universal Render Pipeline (URP) **or** High Definition Render Pipeline (HDRP)
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed (`npm install -g @anthropic-ai/claude-code`)
 
 ## Installation
@@ -58,7 +60,7 @@ Captures CPU, GPU, memory, per-URP-pass timing, and scene structure, then stream
 - CPU: PlayerLoop, Update, LateUpdate, FixedUpdate, Rendering, Physics, Scripts, Animation, GC.Collect
 - Memory: Managed heap, GC allocations (bytes + count)
 - GPU: CPU frame time, GPU frame time, main thread, render thread
-- URP Passes: ~40 render pass markers with CPU timing
+- Render Passes: ~40 URP markers or ~48 HDRP markers with CPU timing (auto-selected)
 - Rendering: Batches, draw calls, set-pass calls, triangles, vertices
 - Bottleneck: CPU/GPU/PresentLimited/Balanced classification
 
@@ -67,6 +69,7 @@ Captures CPU, GPU, memory, per-URP-pass timing, and scene structure, then stream
 - Component breakdown (Renderers, Colliders, Rigidbodies, Animators, Canvas, etc.)
 - Material/shader analysis with SRP Batcher compatibility check
 - Static flags distribution, LOD coverage, texture memory estimate
+- HDRP extras: StackLit/complex material count, decal projectors, custom pass volumes, volumetric fog detection
 
 ## Optional: MCP Integration
 

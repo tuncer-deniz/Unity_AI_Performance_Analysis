@@ -11,11 +11,13 @@ namespace FrameAnalyzer.Runtime.Data
         public RenderingData Rendering;
         public GpuTimingData Gpu;
         public UrpPassTimingData UrpPasses;
+        public HdrpPassTimingData HdrpPasses;
         public BottleneckData Bottleneck;
 
         public FrameSnapshot()
         {
             UrpPasses = UrpPassTimingData.Create();
+            HdrpPasses = HdrpPassTimingData.Create();
         }
     }
 }

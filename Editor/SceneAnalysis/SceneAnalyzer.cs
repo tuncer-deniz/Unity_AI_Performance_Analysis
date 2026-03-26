@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using FrameAnalyzer.Runtime.Utils;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 using Object = UnityEngine.Object;
 
@@ -38,6 +40,14 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
             public int StaticOccludeeCount;
             public int StaticOccluderCount;
             public long EstimatedTextureMB;
+
+            // HDRP-specific fields
+            public int StackLitMaterialCount;        // Layered/complex HDRP materials
+            public int DecalProjectorCount;          // HDRP decal projectors
+            public int CustomPassVolumeCount;        // HDRP custom pass volumes
+            public int HDLightCount;                 // HDRP-specific light properties checked
+            public bool HasVolumetricFog;            // Is volumetric fog/clouds enabled in scene?
+            public int VolumeProfileCount;           // HDRP volume profiles in scene
         }
 
         public static SceneSnapshot CaptureSnapshot()
@@ -122,6 +132,36 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
                     // Raycast targets on UI elements
                     if (comp is UnityEngine.UI.Graphic graphic && graphic.raycastTarget)
                         snap.RaycastTargetCount++;
+
+                    // HDRP-specific components
+                    if (PipelineDetector.IsHdrpActive())
+                    {
+                        // DecalProjector (HDRP)
+                        if (comp.GetType().Name == "DecalProjector")
+                            snap.DecalProjectorCount++;
+
+                        // CustomPassVolume (HDRP)
+                        if (comp.GetType().Name == "CustomPassVolume")
+                            snap.CustomPassVolumeCount++;
+
+                        // Volume (HDRP) for counting profiles
+                        if (comp.GetType().Name == "Volume")
+                            snap.VolumeProfileCount++;
+
+                        // Check for StackLit materials (HDRP complex materials)
+                        if (comp is Renderer renderer)
+                        {
+                            foreach (var mat in renderer.sharedMaterials)
+                            {
+                                if (mat != null && mat.shader != null)
+                                {
+                                    string shaderName = mat.shader.name;
+                                    if (shaderName.Contains("StackLit") || shaderName.Contains("Hair") || shaderName.Contains("Fabric") || shaderName.Contains("Eye"))
+                                        snap.StackLitMaterialCount++;
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -131,6 +171,12 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
             snap.ShaderNames = shaderSet.ToList();
             snap.SrpBatcherIncompatibleShaders = srpIncompatible.ToList();
             snap.EstimatedTextureMB = EstimateTextureMemory();
+
+            // Check for volumetric fog/clouds in HDRP
+            if (PipelineDetector.IsHdrpActive())
+            {
+                snap.HasVolumetricFog = CheckForVolumetricFog();
+            }
 
             return snap;
         }
@@ -183,6 +229,23 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
                 sb.AppendLine();
                 sb.AppendLine($"### LOD Coverage");
                 sb.AppendLine($"- LOD Groups: {snap.LODGroupCount} / {snap.RendererCount} renderers ({lodPct:F0}% coverage)");
+            }
+
+            // HDRP-specific section
+            if (snap.StackLitMaterialCount > 0 || snap.DecalProjectorCount > 0 || snap.CustomPassVolumeCount > 0 || snap.VolumeProfileCount > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("### HDRP Configuration");
+                if (snap.StackLitMaterialCount > 0)
+                    sb.AppendLine($"- StackLit/LayeredLit/Complex Materials: {snap.StackLitMaterialCount}");
+                if (snap.DecalProjectorCount > 0)
+                    sb.AppendLine($"- Decal Projectors: {snap.DecalProjectorCount}");
+                if (snap.CustomPassVolumeCount > 0)
+                    sb.AppendLine($"- Custom Pass Volumes: {snap.CustomPassVolumeCount}");
+                if (snap.VolumeProfileCount > 0)
+                    sb.AppendLine($"- Volume Profiles: {snap.VolumeProfileCount}");
+                if (snap.HasVolumetricFog)
+                    sb.AppendLine($"- Volumetric Fog/Clouds: ENABLED (expensive if at high resolution)");
             }
 
             return sb.ToString();
@@ -305,6 +368,53 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
                 default:
                     return 32; // Conservative estimate
             }
+        }
+
+        /// <summary>
+        /// Checks if volumetric fog or clouds are enabled in any HDRP volume in the scene.
+        /// Uses reflection to inspect Volume profiles for actual Fog or VolumetricClouds components.
+        /// </summary>
+        static bool CheckForVolumetricFog()
+        {
+            try
+            {
+                var volumes = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                foreach (var vol in volumes)
+                {
+                    if (vol == null || vol.GetType().Name != "Volume") continue;
+
+                    // Get the Volume.profile or Volume.sharedProfile via reflection
+                    var profileProp = vol.GetType().GetProperty("profile") ?? vol.GetType().GetProperty("sharedProfile");
+                    if (profileProp == null) continue;
+                    var profile = profileProp.GetValue(vol);
+                    if (profile == null) continue;
+
+                    // Get VolumeProfile.components list
+                    var componentsProp = profile.GetType().GetProperty("components");
+                    if (componentsProp == null) continue;
+                    var components = componentsProp.GetValue(profile) as System.Collections.IList;
+                    if (components == null) continue;
+
+                    foreach (var comp in components)
+                    {
+                        if (comp == null) continue;
+                        string typeName = comp.GetType().Name;
+                        // Check for actual volumetric fog/cloud components
+                        if (typeName == "Fog" || typeName == "VolumetricClouds")
+                        {
+                            // Check if the component is active
+                            var activeProp = comp.GetType().GetProperty("active");
+                            if (activeProp != null && (bool)activeProp.GetValue(comp))
+                                return true;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore; best-effort
+            }
+            return false;
         }
     }
 }

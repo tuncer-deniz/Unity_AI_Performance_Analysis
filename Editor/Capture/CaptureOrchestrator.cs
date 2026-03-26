@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using FrameAnalyzer.Runtime.Collectors;
 using FrameAnalyzer.Runtime.Data;
+using FrameAnalyzer.Runtime.Utils;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace FrameAnalyzer.Editor.Capture
 {
@@ -18,9 +20,42 @@ namespace FrameAnalyzer.Editor.Capture
 
         private readonly List<IFrameDataCollector> _collectors;
 
-        public CaptureOrchestrator(List<IFrameDataCollector> collectors)
+        /// <summary>
+        /// Creates a CaptureOrchestrator, auto-detecting the active render pipeline.
+        /// If collectors list is null, it creates default collectors based on the pipeline.
+        /// </summary>
+        public CaptureOrchestrator(List<IFrameDataCollector> collectors = null)
         {
-            _collectors = collectors ?? throw new ArgumentNullException(nameof(collectors));
+            if (collectors == null)
+            {
+                collectors = new List<IFrameDataCollector>();
+                AddDefaultCollectors(collectors);
+            }
+            _collectors = collectors;
+        }
+
+        /// <summary>
+        /// Adds default collectors based on the current render pipeline (URP vs HDRP).
+        /// </summary>
+        private static void AddDefaultCollectors(List<IFrameDataCollector> collectors)
+        {
+            // Add common collectors
+            collectors.Add(new CpuTimingCollector());
+            collectors.Add(new MemoryCollector());
+            collectors.Add(new RenderingStatsCollector());
+            collectors.Add(new GpuTimingCollector());
+            collectors.Add(new BottleneckCollector());
+
+            // Add pipeline-specific collector
+            if (PipelineDetector.IsHdrpActive())
+            {
+                collectors.Add(new HdrpPassCollector());
+            }
+            else
+            {
+                // Default to URP or generic render pass collector
+                collectors.Add(new UrpPassCollector());
+            }
         }
 
         public void StartCapture(int frameCount)

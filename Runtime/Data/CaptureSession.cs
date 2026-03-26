@@ -31,6 +31,9 @@ namespace FrameAnalyzer.Runtime.Data
         // URP passes (pass name → avg CPU ms, avg GPU ms)
         public List<UrpPassEntry> AvgUrpPasses = new List<UrpPassEntry>();
 
+        // HDRP passes (pass name → avg CPU ms, avg GPU ms)
+        public List<HdrpPassEntry> AvgHdrpPasses = new List<HdrpPassEntry>();
+
         // Bottleneck
         public int CpuBoundFrames, GpuBoundFrames, PresentLimitedFrames, BalancedFrames, IndeterminateFrames;
 
@@ -212,6 +215,35 @@ namespace FrameAnalyzer.Runtime.Data
 
                 // Sort by GPU time descending
                 s.AvgUrpPasses.Sort((a, b) => b.GpuMs.CompareTo(a.GpuMs));
+            }
+
+            // HDRP pass averages
+            var hdrpFrames = Frames.Where(f => f.HdrpPasses.WasCollected && f.HdrpPasses.Passes != null).ToList();
+            if (hdrpFrames.Count > 0)
+            {
+                var passNames = hdrpFrames
+                    .SelectMany(f => f.HdrpPasses.Passes)
+                    .Select(p => p.PassName)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var name in passNames)
+                {
+                    var entries = hdrpFrames
+                        .SelectMany(f => f.HdrpPasses.Passes)
+                        .Where(p => p.PassName == name)
+                        .ToList();
+
+                    s.AvgHdrpPasses.Add(new HdrpPassEntry
+                    {
+                        PassName = name,
+                        CpuMs = entries.Average(e => e.CpuMs),
+                        GpuMs = entries.Average(e => e.GpuMs)
+                    });
+                }
+
+                // Sort by CPU time descending (same as URP for consistency)
+                s.AvgHdrpPasses.Sort((a, b) => b.CpuMs.CompareTo(a.CpuMs));
             }
 
             // Bottleneck classification
