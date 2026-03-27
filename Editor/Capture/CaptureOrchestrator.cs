@@ -59,6 +59,8 @@ namespace FrameAnalyzer.Editor.Capture
             }
         }
 
+        private bool _profilerWasEnabled;
+
         public void StartCapture(int frameCount)
         {
             if (!Application.isPlaying)
@@ -66,6 +68,10 @@ namespace FrameAnalyzer.Editor.Capture
 
             if (State == CaptureState.Capturing)
                 throw new InvalidOperationException("Capture already in progress.");
+
+            // Enable profiler for per-method hierarchy capture
+            _profilerWasEnabled = UnityEngine.Profiling.Profiler.enabled;
+            UnityEngine.Profiling.Profiler.enabled = true;
 
             TotalFrames = frameCount;
             CurrentFrame = 0;
@@ -123,6 +129,13 @@ namespace FrameAnalyzer.Editor.Capture
         {
             foreach (var collector in _collectors)
                 collector.End();
+
+            // Run profiler hierarchy analysis before disabling
+            Session.ProfilerHierarchy = ProfilerHierarchyAnalyzer.Analyze(TotalFrames);
+
+            // Restore profiler state
+            UnityEngine.Profiling.Profiler.enabled = _profilerWasEnabled;
+
             Session.ComputeSummary();
             State = CaptureState.Complete;
         }
