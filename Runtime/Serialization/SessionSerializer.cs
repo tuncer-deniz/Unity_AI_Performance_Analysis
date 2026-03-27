@@ -162,6 +162,33 @@ namespace FrameAnalyzer.Runtime.Serialization
                 sb.AppendLine();
             }
 
+            // HDRP pass breakdown (ProfilerRecorder CPU markers)
+            if (s.AvgHdrpPasses.Count > 0)
+            {
+                sb.AppendLine("### HDRP Render Pass Breakdown — CPU Markers (ms, sorted by CPU time)");
+                sb.AppendLine("| Pass | CPU Avg | GPU Avg |");
+                sb.AppendLine("|------|---------|---------|");
+                foreach (var pass in s.AvgHdrpPasses)
+                    sb.AppendLine(string.Format(Inv, "| {0} | {1:F2} | {2:F2} |", pass.PassName, pass.CpuMs, pass.GpuMs));
+                sb.AppendLine();
+            }
+
+            // HDRP GPU pass breakdown (ProfilingSampler — real GPU timing)
+            if (s.AvgHdrpGpuPasses.Count > 0)
+            {
+                sb.AppendLine("### HDRP Render Pass Breakdown — GPU Timing via ProfilingSampler (ms, sorted by GPU time)");
+                sb.AppendLine("| Pass | CPU ms | GPU ms |");
+                sb.AppendLine("|------|--------|--------|");
+                foreach (var pass in s.AvgHdrpGpuPasses)
+                    sb.AppendLine(string.Format(Inv, "| {0} | {1:F2} | {2:F2} |", pass.PassName, pass.CpuMs, pass.GpuMs));
+                sb.AppendLine();
+            }
+            else if (s.AvgHdrpPasses.Count > 0)
+            {
+                sb.AppendLine("_Note: HDRP ProfilingSampler GPU timing was not available. GPU per-pass breakdown requires HDRP_AVAILABLE define and compatible hardware._");
+                sb.AppendLine();
+            }
+
             // Bottleneck
             int totalBn = s.CpuBoundFrames + s.GpuBoundFrames + s.PresentLimitedFrames + s.BalancedFrames + s.IndeterminateFrames;
             if (totalBn > 0)

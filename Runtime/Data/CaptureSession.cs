@@ -31,8 +31,11 @@ namespace FrameAnalyzer.Runtime.Data
         // URP passes (pass name → avg CPU ms, avg GPU ms)
         public List<UrpPassEntry> AvgUrpPasses = new List<UrpPassEntry>();
 
-        // HDRP passes (pass name → avg CPU ms, avg GPU ms)
+        // HDRP passes — ProfilerRecorder CPU markers (pass name → avg CPU ms)
         public List<HdrpPassEntry> AvgHdrpPasses = new List<HdrpPassEntry>();
+
+        // HDRP passes — ProfilingSampler GPU timing (pass name → avg CPU ms, avg GPU ms)
+        public List<HdrpPassEntry> AvgHdrpGpuPasses = new List<HdrpPassEntry>();
 
         // Bottleneck
         public int CpuBoundFrames, GpuBoundFrames, PresentLimitedFrames, BalancedFrames, IndeterminateFrames;
@@ -244,6 +247,35 @@ namespace FrameAnalyzer.Runtime.Data
 
                 // Sort by CPU time descending (same as URP for consistency)
                 s.AvgHdrpPasses.Sort((a, b) => b.CpuMs.CompareTo(a.CpuMs));
+            }
+
+            // HDRP ProfilingSampler GPU pass averages
+            var hdrpGpuFrames = Frames.Where(f => f.HdrpGpuPasses.WasCollected && f.HdrpGpuPasses.Passes != null).ToList();
+            if (hdrpGpuFrames.Count > 0)
+            {
+                var gpuPassNames = hdrpGpuFrames
+                    .SelectMany(f => f.HdrpGpuPasses.Passes)
+                    .Select(p => p.PassName)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var name in gpuPassNames)
+                {
+                    var entries = hdrpGpuFrames
+                        .SelectMany(f => f.HdrpGpuPasses.Passes)
+                        .Where(p => p.PassName == name)
+                        .ToList();
+
+                    s.AvgHdrpGpuPasses.Add(new HdrpPassEntry
+                    {
+                        PassName = name,
+                        CpuMs = entries.Average(e => e.CpuMs),
+                        GpuMs = entries.Average(e => e.GpuMs)
+                    });
+                }
+
+                // Sort by GPU time descending — this is the primary value of this collector
+                s.AvgHdrpGpuPasses.Sort((a, b) => b.GpuMs.CompareTo(a.GpuMs));
             }
 
             // Bottleneck classification

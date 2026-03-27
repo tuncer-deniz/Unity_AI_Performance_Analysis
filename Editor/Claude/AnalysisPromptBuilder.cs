@@ -44,10 +44,10 @@ namespace FrameAnalyzer.Editor.Claude
             sb.AppendLine("1. **Executive Summary** — One paragraph: overall health, FPS assessment, primary bottleneck");
             sb.AppendLine("2. **Critical Issues** — Ranked by impact. For each: what the data shows, why it's a problem, specific fix");
             sb.AppendLine("3. **Script Hotspots** — From the per-method profiler hierarchy: which specific methods consume the most self-time, which allocate GC memory, and what to do about each");
-            sb.AppendLine("4. **Rendering Analysis** — Draw call efficiency, batching, set-pass calls, URP pass breakdown");
+            sb.AppendLine("4. **Rendering Analysis** — Draw call efficiency, batching, set-pass calls, URP/HDRP pass breakdown");
             sb.AppendLine("5. **CPU Analysis** — Overall script/physics/animation time. Use the aggregate timing for category breakdown, but prefer per-method hierarchy data for specifics (don't repeat insights from both)");
             sb.AppendLine("6. **Memory Analysis** — GC allocations per frame (cite specific allocating methods from the GC allocator table), heap growth. Use the Loaded Asset Memory Breakdown to identify what's consuming the heap: oversized textures, uncompressed audio, read/write meshes, etc. Name specific assets and their sizes.");
-            sb.AppendLine("7. **GPU Analysis** — Frame time breakdown, bottleneck classification, which URP passes are expensive");
+            sb.AppendLine("7. **GPU Analysis** — Frame time breakdown, bottleneck classification, per-pass GPU timing from HDRP ProfilingSampler (if available), which render passes are most expensive");
             if (!string.IsNullOrEmpty(sceneSnapshot))
                 sb.AppendLine("8. **Scene Structure Issues** — Based on the scene analysis: hierarchy depth, static flags, LOD coverage, material/shader issues");
             sb.AppendLine();

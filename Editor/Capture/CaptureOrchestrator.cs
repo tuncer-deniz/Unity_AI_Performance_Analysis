@@ -51,6 +51,10 @@ namespace FrameAnalyzer.Editor.Capture
             if (PipelineDetector.IsHdrpActive())
             {
                 collectors.Add(new HdrpPassCollector());
+#if HDRP_AVAILABLE
+                // ProfilingSampler-based collector gives real GPU per-pass timing
+                collectors.Add(new HdrpProfilingSamplerCollector());
+#endif
             }
             else
             {

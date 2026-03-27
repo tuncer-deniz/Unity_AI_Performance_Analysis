@@ -11,6 +11,17 @@
   "precompiledReferences": [],
   "autoReferenced": true,
   "defineConstraints": [],
-  "versionDefines": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.render-pipelines.high-definition",
+      "expression": "17.0.0",
+      "define": "HDRP_AVAILABLE"
+    },
+    {
+      "name": "com.unity.render-pipelines.universal",
+      "expression": "17.0.0",
+      "define": "URP_AVAILABLE"
+    }
+  ],
   "noEngineReferences": false
 }
