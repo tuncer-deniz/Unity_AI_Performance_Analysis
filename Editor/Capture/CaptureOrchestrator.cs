@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FrameAnalyzer.Editor.Collectors;
 using FrameAnalyzer.Runtime.Collectors;
 using FrameAnalyzer.Runtime.Data;
 using FrameAnalyzer.Runtime.Utils;
