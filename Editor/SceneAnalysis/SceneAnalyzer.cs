@@ -90,42 +90,55 @@ namespace FrameAnalyzer.Editor.SceneAnalysis
                     snap.ComponentCounts.TryGetValue(typeName, out int count);
                     snap.ComponentCounts[typeName] = count + 1;
 
+                    // Skip components on inactive GameObjects — only count what actually
+                    // contributes to rendering/simulation at runtime
+                    bool isActive = go.activeInHierarchy;
+
                     switch (comp)
                     {
                         case Renderer renderer:
-                            snap.RendererCount++;
-                            AnalyzeMaterials(renderer, materialSet, sharedMaterialSet, shaderSet, srpIncompatible);
+                            if (isActive && renderer.enabled)
+                            {
+                                snap.RendererCount++;
+                                AnalyzeMaterials(renderer, materialSet, sharedMaterialSet, shaderSet, srpIncompatible);
+                            }
                             break;
                         case MeshFilter _:
-                            snap.MeshFilterCount++;
+                            if (isActive) snap.MeshFilterCount++;
                             break;
                         case MeshCollider mc:
-                            snap.ColliderCount++;
-                            if (mc.convex) snap.MeshColliderConvexCount++;
-                            else snap.MeshColliderNonConvexCount++;
+                            if (isActive && mc.enabled)
+                            {
+                                snap.ColliderCount++;
+                                if (mc.convex) snap.MeshColliderConvexCount++;
+                                else snap.MeshColliderNonConvexCount++;
+                            }
                             break;
-                        case Collider _:
-                            snap.ColliderCount++;
+                        case Collider col:
+                            if (isActive && col.enabled) snap.ColliderCount++;
                             break;
                         case Rigidbody _:
-                            snap.RigidbodyCount++;
+                            if (isActive) snap.RigidbodyCount++;
                             break;
-                        case Animator _:
-                            snap.AnimatorCount++;
+                        case Animator animator:
+                            if (isActive && animator.enabled) snap.AnimatorCount++;
                             break;
-                        case Canvas _:
-                            snap.CanvasCount++;
+                        case Canvas canvas:
+                            if (isActive && canvas.enabled) snap.CanvasCount++;
                             break;
                         case ParticleSystem _:
-                            snap.ParticleSystemCount++;
+                            if (isActive) snap.ParticleSystemCount++;
                             break;
                         case LODGroup _:
-                            snap.LODGroupCount++;
+                            if (isActive) snap.LODGroupCount++;
                             break;
                         case Light light:
-                            snap.LightCount++;
-                            if (light.shadows != LightShadows.None)
-                                snap.ShadowCastingLightCount++;
+                            if (isActive && light.enabled)
+                            {
+                                snap.LightCount++;
+                                if (light.shadows != LightShadows.None)
+                                    snap.ShadowCastingLightCount++;
+                            }
                             break;
                     }
 
